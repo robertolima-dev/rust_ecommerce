@@ -1,0 +1,133 @@
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+*.pdb
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+log/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Coverage reports
+coverage/
+*.profraw
+
+# Documentation
+docs/_build/
+
+# Node modules (if using any frontend tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Backup files
+*.bak
+*.backup
+
+# Cache
+.cache/
+*.cache
+
+# Local configuration
+config.local.*
+settings.local.*
+
+# Test artifacts
+test-results/
+test-output/
+
+# Performance profiling
+*.prof
+*.flamegraph
+
+# Rust specific
+**/*.rs.bk
+*.pdb
+
+# SQLx
+.sqlx/
+
+# Actix Web specific
+actix-web.log
+
+# Elasticsearch
+elasticsearch-data/
+
+# Redis
+dump.rdb
+
+# AWS
+.aws/
+
+# SSL certificates
+*.pem
+*.key
+*.crt
+*.csr
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# MacOS
+.AppleDouble
+.LSOverride
+
+# Windows
+*.lnk
+
+# Linux
+*~
+
+# Project specific
+uploads/
+public/uploads/
+storage/

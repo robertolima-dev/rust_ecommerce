@@ -1,0 +1,44 @@
+# Ambiente da aplicação (development, testing, production)
+APP_ENVIRONMENT=development
+
+# Configurações do servidor
+SERVER_HOST=127.0.0.1
+SERVER_PORT=8080
+
+# Configurações do banco de dados
+DATABASE_URL=
+DATABASE_MAX_CONNECTIONS=5
+DATABASE_URL_TEST=
+MONGO_URI=mongodb://localhost:27017
+
+# Configurações JWT
+JWT_SECRET=meu_jwt_secret_muito_seguro_com_pelo_menos_32_caracteres_123
+JWT_EXPIRES_IN=86400
+
+# Configurações de Rate Limit
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_PERIOD=60
+REDIS_URL=redis://127.0.0.1:6379
+
+# Configuracoes do elasticsearch
+ELASTICSEARCH_URL=http://localhost:9200
+ELASTICSEARCH_INDEX_PREFIX=dev
+
+# AWS config
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-east-1
+
+# DEBUG
+RUST_LOG=sqlx=debug
+
+# EMAIL
+DEFAULT_FROM_EMAIL=
+
+# Keycloak Configuration
+KEYCLOAK_BASE_URL=http://localhost:8081
+KEYCLOAK_REALM=rust-template
+KEYCLOAK_CLIENT_ID=rust-template-client
+KEYCLOAK_CLIENT_SECRET=your-client-secret-here
+KEYCLOAK_ADMIN_USERNAME=admin
+KEYCLOAK_ADMIN_PASSWORD=admin
