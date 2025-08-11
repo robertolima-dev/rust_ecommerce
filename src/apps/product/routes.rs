@@ -23,11 +23,8 @@ pub async fn get_product(
 ) -> Result<impl Responder, AppError> {
     let id = path.into_inner();
     let result = ProductService::get_product(&app_state, id).await?;
-    Ok(HttpResponse::Ok().json(serde_json::json!({
-        "message": "Detalhes do Product",
-        "id": id,
-        "data": result
-    })))
+
+    Ok(HttpResponse::Ok().json(serde_json::json!(result)))
 }
 
 pub async fn create_product(
@@ -37,13 +34,9 @@ pub async fn create_product(
 ) -> Result<impl Responder, AppError> {
     let tenant_id = req.tenant_id()?;
     let dto = payload.into_inner();
-
     let result = ProductService::create_product(&app_state, dto, tenant_id).await?;
 
-    Ok(HttpResponse::Created().json(serde_json::json!({
-        "message": "Product criado com sucesso",
-        "data": result
-    })))
+    Ok(HttpResponse::Created().json(serde_json::json!(result)))
 }
 
 pub async fn update_product(
@@ -55,13 +48,9 @@ pub async fn update_product(
     let id = path.into_inner();
     let tenant_id = req.tenant_id()?;
     let dto = payload.into_inner();
-
     let result = ProductService::update_product(&app_state, id, tenant_id, dto).await?;
-    Ok(HttpResponse::Ok().json(serde_json::json!({
-        "message": "Product atualizado com sucesso",
-        "id": id,
-        "data": result
-    })))
+
+    Ok(HttpResponse::Ok().json(serde_json::json!(result)))
 }
 
 pub async fn delete_product(
@@ -71,20 +60,9 @@ pub async fn delete_product(
 ) -> Result<impl Responder, AppError> {
     let id = path.into_inner();
     let tenant_id = req.tenant_id()?;
-
-    let deleted = ProductService::delete_product(&app_state, id, tenant_id)
+    ProductService::delete_product(&app_state, id, tenant_id)
         .await
-        .map_err(AppError::from)?; // se você tem From<sqlx::Error> para AppError
+        .map_err(AppError::from)?;
 
-    if deleted {
-        Ok(HttpResponse::Ok().json(serde_json::json!({
-            "message": "Produto deletado com sucesso",
-            "id": id
-        })))
-    } else {
-        Ok(HttpResponse::NotFound().json(serde_json::json!({
-            "message": "Produto não encontrado",
-            "id": id
-        })))
-    }
+    Ok(HttpResponse::NoContent().finish())
 }

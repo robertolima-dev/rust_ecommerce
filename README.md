@@ -1,4 +1,4 @@
-# Rust Template - Actix Web
+# Rust Ecommerce - Actix Web
 
 Um template Rust com Actix Web, PostgreSQL, MongoDB e Elasticsearch.
 

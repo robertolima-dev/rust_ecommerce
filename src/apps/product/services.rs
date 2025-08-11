@@ -23,12 +23,17 @@ impl ProductService {
         Ok(products_paginated)
     }
 
-    pub async fn get_product(app_state: &AppState, id: Uuid) -> Result<Option<Product>, AppError> {
+    pub async fn get_product(app_state: &AppState, id: Uuid) -> Result<Product, AppError> {
         let repository = ProductRepository::new(app_state);
-        repository
+        let product = repository
             .find_by_id(id)
             .await
-            .map_err(|e| AppError::database_error(e.to_string()))
+            .map_err(|e| AppError::database_error(e.to_string()))?;
+
+        match product {
+            Some(product) => Ok(product),
+            None => Err(AppError::not_found("Produto não encontrado")),
+        }
     }
 
     pub async fn create_product(
@@ -48,12 +53,17 @@ impl ProductService {
         id: Uuid,
         tenant_id: Uuid,
         request: UpdateProductRequest,
-    ) -> Result<Option<Product>, AppError> {
+    ) -> Result<Product, AppError> {
         let repository = ProductRepository::new(app_state);
-        repository
+        let product = repository
             .update(id, tenant_id, request)
             .await
-            .map_err(|e| AppError::database_error(e.to_string()))
+            .map_err(|e| AppError::database_error(e.to_string()))?;
+
+        match product {
+            Some(product) => Ok(product),
+            None => Err(AppError::not_found("Produto não encontrado")),
+        }
     }
 
     pub async fn delete_product(
@@ -62,9 +72,14 @@ impl ProductService {
         tenant_id: Uuid,
     ) -> Result<bool, AppError> {
         let repository = ProductRepository::new(app_state);
-        repository
+        let deleted = repository
             .delete(id, tenant_id)
             .await
-            .map_err(|e| AppError::database_error(e.to_string()))
+            .map_err(|e| AppError::database_error(e.to_string()))?;
+
+        match deleted {
+            true => Ok(deleted),
+            false => Err(AppError::not_found("Produto não encontrado")),
+        }
     }
 }
