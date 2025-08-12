@@ -1,6 +1,6 @@
-# Rust Ecommerce - Actix Web
+# Rust E-commerce - Actix Web
 
-Um template Rust com Actix Web, PostgreSQL, MongoDB e Elasticsearch.
+Uma aplicação de estudo de e-commerce desenvolvida em Rust com Actix Web, PostgreSQL, MongoDB e Elasticsearch. Este projeto demonstra a implementação de uma arquitetura robusta para sistemas de comércio eletrônico, incluindo gestão de produtos, usuários, tenants e autenticação.
 
 ## Configuração
 
@@ -275,36 +275,60 @@ src/
 │   ├── settings.rs     # Configurações da aplicação
 │   └── ...
 ├── apps/               # Módulos da aplicação
-│   ├── user/           # Exemplo de app criado
+│   ├── user/           # Sistema de usuários e autenticação
 │   │   ├── mod.rs
 │   │   ├── models.rs
 │   │   ├── routes.rs   # Result<impl Responder, AppError>
 │   │   ├── services.rs # Result<PaginatedResponse<T>, AppError>
 │   │   ├── repositories.rs # Result<T, sqlx::Error>
+│   │   ├── keycloak/   # Integração com Keycloak
 │   │   └── tests.rs
+│   ├── product/        # 🛍️ Sistema de produtos (E-commerce)
+│   │   ├── mod.rs
+│   │   ├── models.rs   # Product, CreateProductRequest, UpdateProductRequest
+│   │   ├── routes.rs   # CRUD completo com tratamento de erros
+│   │   ├── services.rs # Lógica de negócio e validações
+│   │   ├── repositories.rs # Acesso ao banco PostgreSQL
+│   │   └── tests.rs    # Testes abrangentes
+│   ├── tenant/         # Sistema de multi-tenancy
+│   ├── orchestrator/   # Gestão de processos de negócio
+│   ├── sync_app/       # Sistema de sincronização
 │   └── mod.rs
 ├── utils/              # Utilitários
-│   └── pagination.rs   # PaginatedResponse<T>
+│   ├── pagination.rs   # PaginatedResponse<T>
+│   ├── validation.rs   # Validadores customizados
+│   ├── jwt.rs          # Gestão de tokens JWT
+│   └── ...
 └── main.rs            # Ponto de entrada
 ```
 
 ## Funcionalidades
 
+### 🏗️ **Arquitetura e Infraestrutura**
 - ✅ Servidor Actix Web configurado
-- ✅ Conexão com PostgreSQL
-- ✅ Conexão com MongoDB
-- ✅ Conexão com Elasticsearch
-- ✅ Sistema de configurações
+- ✅ Conexão com PostgreSQL (banco principal)
+- ✅ Conexão com MongoDB (dados NoSQL)
+- ✅ Conexão com Elasticsearch (busca e indexação)
+- ✅ Sistema de configurações por ambiente
 - ✅ Logging com tracing
-- ✅ Estrutura modular
+- ✅ Estrutura modular escalável
 - ✅ Scripts de automação para criação de apps
-- ✅ Sistema de migrations
+- ✅ Sistema de migrations automático
+
+### 🔧 **Qualidade de Código**
 - ✅ **Tratamento robusto de erros com AppError**
 - ✅ **Paginação automática com PaginatedResponse**
 - ✅ **Tipagem específica para erros de banco**
 - ✅ **Arquitetura em camadas com responsabilidades bem definidas**
 - ✅ **Sistema de gestão de tokens para autenticação e recuperação**
 - ✅ **Validadores customizados para email, senha, telefone, CPF e data**
+
+### 🛍️ **Módulos de E-commerce**
+- ✅ **Sistema de Usuários**: Cadastro, login, perfis e autenticação
+- ✅ **Sistema de Produtos**: CRUD completo com gestão de estoque e preços
+- ✅ **Sistema de Tenants**: Multi-tenancy para diferentes lojas
+- ✅ **Sistema de Orquestradores**: Gestão de processos de negócio
+- ✅ **Sistema de Sincronização**: Produtor/consumidor para eventos
 
 ## 🔍 Sistema de Validação Customizada
 
@@ -383,6 +407,124 @@ pub struct ProfileRequest {
 - ✅ **Regras específicas** para o contexto brasileiro
 - ✅ **Reutilização** em múltiplos modelos
 - ✅ **Manutenibilidade** centralizada
+
+## 🛍️ **Módulo de Produtos (E-commerce)**
+
+O módulo de produtos é o coração do sistema de e-commerce, implementando todas as funcionalidades necessárias para gestão de catálogo de produtos.
+
+### **Funcionalidades do Módulo**
+
+| Operação | Endpoint | Método | Descrição |
+|----------|----------|---------|-----------|
+| **Listar Produtos** | `/api/v1/products/` | `GET` | Lista paginada com filtros (nome, preço, estoque) |
+| **Buscar Produto** | `/api/v1/products/{id}` | `GET` | Busca produto específico por ID |
+| **Criar Produto** | `/api/v1/products/` | `POST` | Cria novo produto com validações |
+| **Atualizar Produto** | `/api/v1/products/{id}` | `PUT` | Atualiza produto existente |
+| **Deletar Produto** | `/api/v1/products/{id}` | `DELETE` | Remove produto (soft delete) |
+
+### **Modelo de Dados**
+
+```rust
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Product {
+    pub id: Uuid,                    // Identificador único
+    pub tenant_id: Uuid,             // ID do tenant/loja
+    pub name: String,                // Nome do produto
+    pub slug: String,                // URL amigável
+    pub short_description: Option<String>, // Descrição curta
+    pub description: Option<String>,       // Descrição completa
+    pub price: BigDecimal,           // Preço em centavos
+    pub stock_quantity: i32,        // Quantidade em estoque
+    pub attributes: Option<serde_json::Value>, // Atributos customizados
+    pub is_active: bool,             // Status ativo/inativo
+    pub dt_created: DateTime<Utc>,   // Data de criação
+    pub dt_updated: DateTime<Utc>,   // Data de atualização
+    pub dt_deleted: Option<DateTime<Utc>>, // Soft delete
+}
+```
+
+### **Validações Implementadas**
+
+- ✅ **Nome**: Obrigatório, não pode ser vazio
+- ✅ **Preço**: Deve ser positivo (em centavos)
+- ✅ **Estoque**: Deve ser não-negativo
+- ✅ **Tenant**: Produtos são isolados por loja
+- ✅ **Slug**: Geração automática baseada no nome
+
+### **Tratamento de Erros**
+
+O módulo implementa tratamento robusto de erros:
+
+```rust
+// Service retorna erro 404 quando produto não é encontrado
+pub async fn get_product(app_state: &AppState, id: Uuid) -> Result<Product, AppError> {
+    let repository = ProductRepository::new(app_state);
+    let product = repository.find_by_id(id).await?;
+
+    match product {
+        Some(product) => Ok(product),
+        None => Err(AppError::not_found("Produto não encontrado")),
+    }
+}
+```
+
+### **Respostas HTTP**
+
+| Status | Operação | Body |
+|--------|----------|------|
+| **200** | Listar/Buscar/Atualizar | JSON com dados do produto |
+| **201** | Criar | JSON com mensagem de sucesso e dados |
+| **204** | Deletar | Sem conteúdo (sucesso) |
+| **404** | Produto não encontrado | JSON com mensagem de erro |
+| **400** | Dados inválidos | JSON com detalhes da validação |
+| **500** | Erro interno | JSON com mensagem de erro |
+
+### **Filtros de Listagem**
+
+```rust
+#[derive(Debug, Deserialize)]
+pub struct ProductListParams {
+    pub name: Option<String>,        // Filtrar por nome
+    pub min_price: Option<i64>,      // Preço mínimo
+    pub max_price: Option<i64>,      // Preço máximo
+    pub limit: Option<i64>,          // Limite por página
+    pub offset: Option<i64>,         // Offset para paginação
+    pub is_active: Option<bool>,     // Filtrar por status
+}
+```
+
+### **Exemplo de Uso**
+
+```bash
+# Listar produtos ativos com preço entre R$ 10 e R$ 100
+GET /api/v1/products/?min_price=1000&max_price=10000&is_active=true&limit=20
+
+# Buscar produto específico
+GET /api/v1/products/550e8400-e29b-41d4-a716-446655440000
+
+# Criar novo produto
+POST /api/v1/products/
+{
+    "name": "Smartphone XYZ",
+    "short_description": "Smartphone de última geração",
+    "description": "Smartphone com câmera de 48MP...",
+    "price": 199900,  // R$ 1.999,00
+    "stock_quantity": 50,
+    "is_active": true
+}
+```
+
+### **Testes Implementados**
+
+O módulo inclui testes abrangentes:
+
+- ✅ **Testes de Models**: Validação de criação e atualização
+- ✅ **Testes de Services**: Lógica de negócio e tratamento de erros
+- ✅ **Testes de Validação**: Campos obrigatórios e formatos
+- ✅ **Testes de Integração**: Cenários de erro e sucesso
+- ✅ **Funções Auxiliares**: Dados de teste reutilizáveis
+
+---
 
 ## 🔐 Sistema de Gestão de Tokens
 
@@ -559,11 +701,30 @@ token_repo.mark_as_consumed(token.id).await?;
 
 ## Próximos Passos
 
-1. Implementar rotas específicas em `src/app_core/app_routes.rs`
-2. Adicionar modelos de dados
-3. Implementar autenticação JWT
-4. Adicionar validação de dados
-5. Implementar testes
-6. **Configurar paginação dinâmica (limit/offset via query params)**
-7. **Implementar cache para melhorar performance**
-8. **Adicionar documentação OpenAPI/Swagger** 
+### 🚀 **Funcionalidades de E-commerce**
+1. **Sistema de Categorias**: Organização hierárquica de produtos
+2. **Sistema de Imagens**: Upload e gestão de imagens de produtos
+3. **Sistema de Variações**: Produtos com diferentes opções (cor, tamanho, etc.)
+4. **Sistema de Avaliações**: Comentários e ratings dos clientes
+5. **Sistema de Descontos**: Cupons e promoções
+6. **Sistema de Carrinho**: Gestão de carrinho de compras
+7. **Sistema de Pedidos**: Processamento e gestão de pedidos
+8. **Sistema de Pagamentos**: Integração com gateways de pagamento
+
+### 🔧 **Melhorias Técnicas**
+1. **Configurar paginação dinâmica** (limit/offset via query params)
+2. **Implementar cache** para melhorar performance
+3. **Adicionar documentação OpenAPI/Swagger**
+4. **Implementar busca full-text** com Elasticsearch
+5. **Sistema de notificações** para eventos de produtos
+6. **Logs de auditoria** para todas as operações
+7. **Rate limiting** para APIs públicas
+8. **Métricas e monitoramento** com Prometheus
+
+### 📱 **Frontend e UX**
+1. **Interface administrativa** para gestão de produtos
+2. **API de busca** com filtros avançados
+3. **Sistema de tags** para categorização
+4. **Exportação de dados** (CSV, JSON)
+5. **Importação em lote** de produtos
+6. **Dashboard de métricas** de vendas 
