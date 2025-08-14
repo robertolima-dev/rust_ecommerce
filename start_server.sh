@@ -12,8 +12,8 @@ else
 fi
 
 # Run migrations antes de iniciar o servidor
-# echo "🛠️  Rodando migrations..."
-# sqlx migrate run
+echo "🛠️  Rodando migrations..."
+sqlx migrate run
 
 # Rodar todos os testes
 # echo "🧪 Rodando testes unitários e de integração..."
