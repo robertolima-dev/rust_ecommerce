@@ -1,5 +1,5 @@
 use crate::app_core::auth_middleware::AuthMiddleware;
-use crate::apps::cart::routes::{create_cart, delete_cart, get_cart, list_carts, update_cart};
+use crate::apps::cart::routes::{create_cart, delete_cart, get_card_by_tenant, get_cards};
 use crate::apps::orchestrator::routes::{
     authorize_app, create_orchestrator, delete_orchestrator, get_orchestrator, list_orchestrators,
     sync_all_users_with_app,
@@ -72,10 +72,9 @@ pub fn api_v1_scope() -> Scope {
                 )
                 .service(
                     web::scope("/carts")
-                        .route("/", web::get().to(list_carts))
+                        .route("/", web::get().to(get_card_by_tenant))
+                        .route("/all/", web::get().to(get_cards))
                         .route("/", web::post().to(create_cart))
-                        .route("/{id}/", web::get().to(get_cart))
-                        .route("/{id}/", web::put().to(update_cart))
                         .route("/{id}/", web::delete().to(delete_cart)),
                 ),
         )

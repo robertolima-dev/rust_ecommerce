@@ -31,12 +31,17 @@ echo "✅ Diretório criado: src/apps/$APP_DIR_NAME"
 # 2. Criar routes.rs
 cat > "src/apps/$APP_DIR_NAME/routes.rs" << EOF
 use actix_web::{web, HttpResponse, Responder};
+use crate::app_core::app_extensions::RequestUserExt;
 use crate::app_core::app_state::AppState;
 use crate::app_core::app_error::AppError;
+use uuid::Uuid;
 
 pub async fn list_${APP_DIR_NAME}s(
     app_state: web::Data<AppState>,
+    req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
+    let user_id = req.user_id()?;
+    let tenant_id = req.tenant_id()?;
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "message": "Lista de $APP_NAME",
         "data": []
@@ -45,8 +50,11 @@ pub async fn list_${APP_DIR_NAME}s(
 
 pub async fn get_${APP_DIR_NAME}(
     app_state: web::Data<AppState>,
-    path: web::Path<String>,
+    path: web::Path<Uuid>,
+    req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
+    let user_id = req.user_id()?;
+    let tenant_id = req.tenant_id()?;
     let id = path.into_inner();
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "message": "Detalhes do $APP_NAME",
@@ -58,7 +66,10 @@ pub async fn get_${APP_DIR_NAME}(
 pub async fn create_${APP_DIR_NAME}(
     app_state: web::Data<AppState>,
     payload: web::Json<serde_json::Value>,
+    req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
+    let user_id = req.user_id()?;
+    let tenant_id = req.tenant_id()?;
     Ok(HttpResponse::Created().json(serde_json::json!({
         "message": "$APP_NAME criado com sucesso",
         "data": payload.into_inner()
@@ -67,9 +78,12 @@ pub async fn create_${APP_DIR_NAME}(
 
 pub async fn update_${APP_DIR_NAME}(
     app_state: web::Data<AppState>,
-    path: web::Path<String>,
+    path: web::Path<Uuid>,
     payload: web::Json<serde_json::Value>,
+    req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
+    let user_id = req.user_id()?;
+    let tenant_id = req.tenant_id()?;
     let id = path.into_inner();
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "message": "$APP_NAME atualizado com sucesso",
@@ -80,8 +94,11 @@ pub async fn update_${APP_DIR_NAME}(
 
 pub async fn delete_${APP_DIR_NAME}(
     app_state: web::Data<AppState>,
-    path: web::Path<String>,
+    path: web::Path<Uuid>,
+    req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
+    let user_id = req.user_id()?;
+    let tenant_id = req.tenant_id()?;
     let id = path.into_inner();
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "message": "$APP_NAME deletado com sucesso",

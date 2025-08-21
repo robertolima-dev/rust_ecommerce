@@ -1,63 +1,42 @@
 use crate::app_core::app_error::AppError;
 use crate::app_core::app_extensions::RequestUserExt;
 use crate::app_core::app_state::AppState;
+use crate::apps::cart::services::CartService;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use uuid::Uuid;
 
-pub async fn list_carts(
+pub async fn get_cards(
     app_state: web::Data<AppState>,
     req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
-    let user_id = req.user_id()?;
     let tenant_id = req.tenant_id()?;
-    Ok(HttpResponse::Ok().json(serde_json::json!({
-        "message": "Lista de Cart",
-        "data": []
-    })))
+
+    let result = CartService::list_cards(&app_state, tenant_id).await?;
+
+    Ok(HttpResponse::Ok().json(serde_json::json!(result)))
 }
 
-pub async fn get_cart(
+pub async fn get_card_by_tenant(
     app_state: web::Data<AppState>,
     req: HttpRequest,
-    path: web::Path<Uuid>,
 ) -> Result<impl Responder, AppError> {
-    let user_id = req.user_id()?;
     let tenant_id = req.tenant_id()?;
-    let id = path.into_inner();
-    Ok(HttpResponse::Ok().json(serde_json::json!({
-        "message": "Detalhes do Cart",
-        "id": id,
-        "data": {}
-    })))
+
+    let result = CartService::get_cart(&app_state, tenant_id).await?;
+
+    Ok(HttpResponse::Ok().json(serde_json::json!(result)))
 }
 
 pub async fn create_cart(
     app_state: web::Data<AppState>,
-    payload: web::Json<serde_json::Value>,
     req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
     let user_id = req.user_id()?;
     let tenant_id = req.tenant_id()?;
-    Ok(HttpResponse::Created().json(serde_json::json!({
-        "message": "Cart criado com sucesso",
-        "data": payload.into_inner()
-    })))
-}
 
-pub async fn update_cart(
-    app_state: web::Data<AppState>,
-    path: web::Path<Uuid>,
-    payload: web::Json<serde_json::Value>,
-    req: HttpRequest,
-) -> Result<impl Responder, AppError> {
-    let user_id = req.user_id()?;
-    let tenant_id = req.tenant_id()?;
-    let id = path.into_inner();
-    Ok(HttpResponse::Ok().json(serde_json::json!({
-        "message": "Cart atualizado com sucesso",
-        "id": id,
-        "data": payload.into_inner()
-    })))
+    let result = CartService::create_cart(&app_state, user_id, tenant_id).await?;
+
+    Ok(HttpResponse::Ok().json(serde_json::json!(result)))
 }
 
 pub async fn delete_cart(
@@ -65,11 +44,10 @@ pub async fn delete_cart(
     path: web::Path<Uuid>,
     req: HttpRequest,
 ) -> Result<impl Responder, AppError> {
-    let user_id = req.user_id()?;
     let tenant_id = req.tenant_id()?;
     let id = path.into_inner();
-    Ok(HttpResponse::Ok().json(serde_json::json!({
-        "message": "Cart deletado com sucesso",
-        "id": id
-    })))
+
+    CartService::delete_cart(&app_state, id, tenant_id).await?;
+
+    Ok(HttpResponse::NoContent().finish())
 }

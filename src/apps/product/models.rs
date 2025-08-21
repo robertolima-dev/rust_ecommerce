@@ -45,13 +45,6 @@ pub struct UpdateProductRequest {
     pub is_active: Option<bool>,
 }
 
-#[derive(Debug, Serialize)]
-pub struct ProductResponse {
-    pub id: Uuid,
-    pub dt_created: DateTime<Utc>,
-    pub dt_updated: DateTime<Utc>,
-}
-
 #[derive(Debug, Deserialize)]
 pub struct ProductListParams {
     pub name: Option<String>,
