@@ -1,7 +1,9 @@
 use crate::app_core::app_error::AppError;
 use crate::app_core::app_extensions::RequestUserExt;
 use crate::app_core::app_state::AppState;
+use crate::apps::cart::models::{AddProductCart, DeleteProductCart};
 use crate::apps::cart::services::CartService;
+use actix_web::web::Json;
 use actix_web::{HttpRequest, HttpResponse, Responder, web};
 use uuid::Uuid;
 
@@ -50,4 +52,34 @@ pub async fn delete_cart(
     CartService::delete_cart(&app_state, id, tenant_id).await?;
 
     Ok(HttpResponse::NoContent().finish())
+}
+
+pub async fn add_product_cart(
+    app_state: web::Data<AppState>,
+    payload: Json<AddProductCart>,
+    req: HttpRequest,
+) -> Result<impl Responder, AppError> {
+    let tenant_id = req.tenant_id()?;
+    let user_id = req.user_id()?;
+    let dto = payload.into_inner();
+
+    let result =
+        CartService::add_product_cart_by_tenant(&app_state, dto, tenant_id, user_id).await?;
+
+    Ok(HttpResponse::Ok().json(serde_json::json!(result)))
+}
+
+pub async fn delete_product_cart(
+    app_state: web::Data<AppState>,
+    payload: Json<DeleteProductCart>,
+    req: HttpRequest,
+) -> Result<impl Responder, AppError> {
+    let tenant_id = req.tenant_id()?;
+    let user_id = req.user_id()?;
+    let dto = payload.into_inner();
+
+    let result =
+        CartService::delete_product_cart_by_tenant(&app_state, dto, tenant_id, user_id).await?;
+
+    Ok(HttpResponse::Ok().json(serde_json::json!(result)))
 }
