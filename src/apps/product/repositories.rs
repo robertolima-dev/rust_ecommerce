@@ -180,6 +180,60 @@ impl<'a> ProductRepository<'a> {
         }))
     }
 
+    pub async fn find_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Product>, sqlx::Error> {
+        if ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Construir a query dinamicamente baseada no número de IDs
+        let placeholders: Vec<String> = (1..=ids.len())
+            .map(|i| format!("${}", i))
+            .collect();
+        
+        let query = format!(
+            "SELECT * FROM products WHERE id IN ({}) AND dt_deleted IS NULL AND is_active = true",
+            placeholders.join(",")
+        );
+
+        let mut query_builder = sqlx::query(&query);
+        
+        // Bind dos parâmetros
+        for id in ids {
+            query_builder = query_builder.bind(id);
+        }
+
+        let rows = query_builder.fetch_all(&self.app_state.db).await?;
+
+        let products = rows
+            .into_iter()
+            .map(|row| Product {
+                id: row.get("id"),
+                tenant_id: row.get("tenant_id"),
+                name: row.get("name"),
+                slug: row.get("slug"),
+                short_description: row.get("short_description"),
+                description: row.get("description"),
+                price: row.get("price"),
+                stock_quantity: row.get("stock_quantity"),
+                attributes: row.get("attributes"),
+                is_active: row.get("is_active"),
+                dt_created: DateTime::from_naive_utc_and_offset(
+                    row.get::<NaiveDateTime, _>("dt_created"),
+                    Utc,
+                ),
+                dt_updated: DateTime::from_naive_utc_and_offset(
+                    row.get::<NaiveDateTime, _>("dt_updated"),
+                    Utc,
+                ),
+                dt_deleted: row
+                    .get::<Option<NaiveDateTime>, _>("dt_deleted")
+                    .map(|dt| DateTime::from_naive_utc_and_offset(dt, Utc)),
+            })
+            .collect();
+
+        Ok(products)
+    }
+
     pub async fn create(
         &self,
         _request: CreateProductRequest,

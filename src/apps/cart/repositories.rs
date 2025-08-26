@@ -1,9 +1,11 @@
 use crate::app_core::app_state::AppState;
-use crate::apps::cart::models::{Cart, CartStatus};
-use bigdecimal::BigDecimal;
+use crate::apps::cart::models::{Cart, CartItem, CartStatus};
+use bigdecimal::{BigDecimal, ToPrimitive};
 // use chrono::NaiveDateTime;
 use chrono::{DateTime, Utc};
 // use sqlx::Row;
+use serde_json::Value;
+use sqlx::types::Json;
 use uuid::Uuid;
 
 pub struct CartRepository<'a> {
@@ -37,6 +39,7 @@ impl<'a> CartRepository<'a> {
                 (dt_deleted AT TIME ZONE 'UTC') as "dt_deleted?: DateTime<Utc>"
             FROM carts
             WHERE tenant_id = $1
+            ORDER BY dt_updated desc
             "#,
             tenant_id
         )
@@ -193,6 +196,198 @@ impl<'a> CartRepository<'a> {
             CartStatus::CANCELLED as _,
             id,
             tenant_id
+        )
+        .execute(&self.app_state.db)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn update_cart_data(
+        &self,
+        cart_id: Uuid,
+        new_subtotal: &BigDecimal,
+        discount_total: &BigDecimal,
+        tax_total: &BigDecimal,
+        shipping_total: &BigDecimal,
+    ) -> Result<bool, sqlx::Error> {
+        let now = Utc::now().naive_utc();
+
+        // Converter BigDecimal para i64 (centavos)
+        let subtotal_cents = (new_subtotal * BigDecimal::from(100)).to_i64().unwrap_or(0);
+        let discount_total_cents = (discount_total * BigDecimal::from(100))
+            .to_i64()
+            .unwrap_or(0);
+        let tax_cents = (tax_total * BigDecimal::from(100)).to_i64().unwrap_or(0);
+        let shipping_cents = (shipping_total * BigDecimal::from(100))
+            .to_i64()
+            .unwrap_or(0);
+
+        let result = sqlx::query!(
+            r#"
+            UPDATE carts 
+            SET 
+                subtotal = $1,
+                tax_total = $2,
+                shipping_total = $3,
+                discount_total = $4,
+                dt_updated = $5
+            WHERE id = $6 AND dt_deleted IS NULL
+            "#,
+            subtotal_cents,
+            tax_cents,
+            shipping_cents,
+            discount_total_cents,
+            now,
+            cart_id
+        )
+        .execute(&self.app_state.db)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn create_cart_item(
+        &self,
+        cart_id: Uuid,
+        product_id: Uuid,
+        variant_id: Uuid,
+        unit_price: i64,
+        quantity: i32,
+        line_discount_total: i64,
+        line_tax_total: i64,
+        attributes_snapshot: Json<Value>,
+    ) -> Result<bool, sqlx::Error> {
+        let id = Uuid::new_v4();
+        let now = Utc::now().naive_utc();
+
+        sqlx::query!(
+            r#"
+            INSERT INTO cart_items (
+                id,
+                cart_id,
+                product_id,
+                variant_id,
+                unit_price,
+                quantity,
+                line_discount_total,
+                line_tax_total,
+                attributes_snapshot,
+                dt_created,
+                dt_updated
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            RETURNING
+                id,
+                cart_id,
+                product_id,
+                variant_id,
+                unit_price,
+                quantity,
+                line_discount_total,
+                line_tax_total,
+                line_total,
+                attributes_snapshot,
+                attributes_hash,
+                dt_created,
+                dt_updated,
+                dt_deleted
+            "#,
+            id,
+            cart_id,
+            product_id,
+            variant_id,
+            unit_price,
+            quantity,
+            line_discount_total,
+            line_tax_total,
+            attributes_snapshot.0,
+            now,
+            now
+        )
+        .fetch_one(&self.app_state.db)
+        .await?;
+
+        Ok(true)
+    }
+
+    pub async fn list_cart_items(&self, cart_id: Uuid) -> Result<Vec<CartItem>, sqlx::Error> {
+        let rows = sqlx::query_as!(
+            CartItem,
+            r#"
+            SELECT
+                id as "id!",
+                cart_id as "cart_id!",
+                product_id as "product_id!",
+                variant_id as "variant_id?",
+                unit_price as "unit_price!",
+                quantity as "quantity!",
+                line_discount_total as "line_discount_total!",
+                line_tax_total as "line_tax_total!",
+                line_total as "line_total!",
+                attributes_snapshot as "attributes_snapshot!",
+                attributes_hash as "attributes_hash!",
+                (dt_created AT TIME ZONE 'UTC') as "dt_created!: DateTime<Utc>",
+                (dt_updated AT TIME ZONE 'UTC') as "dt_updated!: DateTime<Utc>",
+                (dt_deleted AT TIME ZONE 'UTC') as "dt_deleted?: DateTime<Utc>"
+            FROM
+                cart_items
+            WHERE
+                cart_id = $1
+                AND dt_deleted IS NULL
+            "#,
+            cart_id
+        )
+        .fetch_all(&self.app_state.db)
+        .await?;
+
+        Ok(rows)
+    }
+
+    /// Atualiza a quantidade de um item do carrinho
+    pub async fn update_cart_item_quantity(
+        &self,
+        item_id: Uuid,
+        new_quantity: i32,
+        unit_price: i64,
+    ) -> Result<bool, sqlx::Error> {
+        let now = Utc::now().naive_utc();
+
+        let result = sqlx::query!(
+            r#"
+            UPDATE cart_items 
+            SET 
+                quantity = $1,
+                unit_price = $2,
+                dt_updated = $3
+            WHERE id = $4 AND dt_deleted IS NULL
+            "#,
+            new_quantity,
+            unit_price,
+            now,
+            item_id
+        )
+        .execute(&self.app_state.db)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    /// Remove um item do carrinho (soft delete)
+    pub async fn delete_cart_item(&self, item_id: Uuid) -> Result<bool, sqlx::Error> {
+        let now = Utc::now().naive_utc();
+
+        let result = sqlx::query!(
+            r#"
+            UPDATE cart_items 
+            SET 
+                dt_deleted = $1,
+                dt_updated = $2
+            WHERE id = $3 AND dt_deleted IS NULL
+            "#,
+            now,
+            now,
+            item_id
         )
         .execute(&self.app_state.db)
         .await?;
